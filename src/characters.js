@@ -90,7 +90,8 @@ export function createCharacterActor(parent,role,{onAssetStatus=()=>{}}={}){
  const fallback=buildFallback(role==='robot'?0xd7e2e6:0x71828a);
  root.add(fallback.root);
  let materials=fallback.materials,baseMaterials=[],mixer=null,actions={};
- let currentAction=null,modelReady=false,lastWalking=false,localTime=0;
+ let currentAction=null,modelReady=false,localTime=0;
+ let clipHead=false,clipCutoff=1.49;
  function saveMaterialBases(){
   baseMaterials=materials.map(mat=>({
    mat,color:mat.color?.clone()||null,
@@ -130,6 +131,12 @@ export function createCharacterActor(parent,role,{onAssetStatus=()=>{}}={}){
    root.add(normalized);
    materials=clonedMaterials;
    saveMaterialBases();
+   // Preserve first-person head clipping even if the GLB arrives after the
+   // user starts playing or toggles camera view.
+   for(const mat of materials){
+    mat.clippingPlanes=clipHead?[new THREE.Plane(new THREE.Vector3(0,-1,0),clipCutoff)]:[];
+    mat.needsUpdate=true;
+   }
    mixer=nextMixer;actions=nextActions;currentAction=nextActions.idle||null;
    modelReady=true;
    onAssetStatus(role,config.name+' LOADED');
@@ -144,10 +151,11 @@ export function createCharacterActor(parent,role,{onAssetStatus=()=>{}}={}){
   root,
   get loaded(){return modelReady},
   setFirstPersonClip(enabled,cutoff=1.49){
+   clipHead=enabled;clipCutoff=cutoff;
    // Head/upper torso are hidden only from the first-person camera.
    // Legs stay visible when looking down; the full rig is shown when inspecting.
    for(const mat of materials){
-    mat.clippingPlanes=enabled?[new THREE.Plane(new THREE.Vector3(0,-1,0),cutoff)]:[];
+    mat.clippingPlanes=clipHead?[new THREE.Plane(new THREE.Vector3(0,-1,0),clipCutoff)]:[];
     mat.needsUpdate=true;
    }
   },
