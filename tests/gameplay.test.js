@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {
- ROOM,BAG,OBSTACLES,newGame,forward,right,look,move,bagInRange,punch,update,flashlightToggle
+ ROOM,BAG,OBSTACLES,FLASHLIGHT,newGame,forward,right,look,move,bagInRange,punch,update,flashlightToggle
 } from '../src/gameplay.js';
 
 test('new game starts inside the darkroom facing forward',()=>{
@@ -89,6 +89,32 @@ test('hitting the bag gives it a real pendulum impulse',()=>{
  assert.ok(Math.abs(s.bagVelX)+Math.abs(s.bagVelZ)>0);
  update(s,.05);
  assert.ok(Math.abs(s.bagTiltX)+Math.abs(s.bagTiltZ)>0);
+});
+test('every punch sends the bottom of the bag away from the player',()=>{
+ const approaches=[
+  {x:BAG.x,z:BAG.z+1.5,yaw:0},
+  {x:BAG.x-1.5,z:BAG.z,yaw:Math.PI/2},
+  {x:BAG.x+1.5,z:BAG.z,yaw:-Math.PI/2},
+  {x:BAG.x,z:BAG.z-1.5,yaw:Math.PI}
+ ];
+ for(const a of approaches){
+  const s=newGame();Object.assign(s,a);
+  assert.equal(bagInRange(s),true);
+  assert.equal(punch(s).hit,true);
+  update(s,.05);
+  // The bag hangs below the pivot: rotating +X moves it toward -Z;
+  // rotating +Z moves it toward +X.
+  const dx=2.15*Math.sin(s.bagTiltZ),dz=-2.15*Math.sin(s.bagTiltX);
+  const f=forward(s.yaw);
+  assert.ok(dx*f.x+dz*f.z>0,'bag must move away from player when punched');
+ }
+});
+test('flashlight is both wider and stronger than the original beam',()=>{
+ assert.ok(FLASHLIGHT.intensity>94);
+ assert.ok(FLASHLIGHT.distance>24);
+ assert.ok(FLASHLIGHT.angle>.33);
+ assert.ok(FLASHLIGHT.beamRadius>2.3);
+ assert.ok(FLASHLIGHT.beamLength>9);
 });
 test('bag swing decays gradually instead of freezing',()=>{
  const s=newGame();s.z=BAG.z+1.5;punch(s);
