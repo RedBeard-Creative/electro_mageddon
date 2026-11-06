@@ -1,4 +1,4 @@
-# ⚡ ELECTROMAGEDDON — Prototype 03: Animated Robot Sparring
+# ⚡ ELECTROMAGEDDON — Prototype 04: Jumping, Xbot Hands & Smooth Robot AI
 
 A small, playable **3D first-person action prototype** built with Three.js and Vite. This is the beginning of Electromageddon—not the full robot-apocalypse adventure yet.
 
@@ -9,6 +9,38 @@ A small, playable **3D first-person action prototype** built with Three.js and V
 - **Punching bag direction fixed:** the bottom of the bag now travels *away* from the character when struck, whether you stand in front, behind, left, or right. The swinging pendulum still damps naturally.
 - **Bigger, brighter flashlight:** spotlight intensity increased from 94 to 235, range from 24 to 36 world units, and half-angle from 0.33 to 0.57 radians. The visible beam is wider and longer, while the rest of the room stays dark.
 - **25 gameplay checks passed** including all-direction bag impulse tests and flashlight parameter checks. Graphics appearance still needs direct inspection in a browser.
+
+## Version 0.4 — Jumping, properly proportioned hands & AI movement
+
+This update **keeps the original hit-stagger**. Every punch still makes the AETHER-02 robot flash red for 0.85 seconds, move backward, and pause for a brief stagger.
+
+- **Better first-person hands:** Replaced the block-shaped mitts with custom smooth, anatomically proportioned Xbot-inspired mechanical hands. Each hand has a tapered forearm, rounded palm, a thumb, four individually segmented fingers, knuckle plates, dark joint seams, and an animated curl. The first-person hands are purpose-built from 3D geometry rather than extracted from the actual Xbot GLB. The authentic Xbot *full body* remains in the game; the new hand viewmodels are styled after it. They support `ready`, `hold`, and `fist` poses for future tools.
+- **Held flashlight:** The flashlight is mounted directly into the left gripping hand. Its wide, bright beam moves subtly as the left hand moves and punches.
+- **Jump:** Press **Space** (or **J**) to jump. Real vertical gravity brings the character back to the floor; the full-body player rig and first-person camera rise and fall together. No double jumping. Sprint or strafe while airborne.
+- **Correct view-relative movement:** Mouse turning, arrow keys and forward movement now consistently use the same direction.
+- **Smooth enemy turning:** AETHER no longer instantly faces its next patrol point. It rotates by a limited number of degrees each frame, slows before turns, and advances with short steps. Turning in place continues the baked walking animation at a slower speed to avoid hovering.
+- **AI chase mode:** AETHER patrols between fixed waypoints until you move within noticing distance. It then targets your *current* position and follows you directly. If you escape far enough for long enough, it resumes searching its route. The HUD shows `AI PATROL` and `AI PURSUIT`.
+- **Stagger unchanged:** The original backward knockback, brief frozen steps, red armor glow, recovery and eventual reactivation are retained.
+
+### Controls (v0.4)
+
+| Key | Action |
+| --- | --- |
+| Mouse move | Look around freely, no click required |
+| ↑ / ↓ | Move forward / backward where the camera faces |
+| ← / → | Strafe left / right |
+| W / A / S / D | Alternative movement |
+| **Space** | **Jump** (new; Space no longer punches) |
+| J | Alternative jump key |
+| F / PUNCH button / left click in 3D | Punch; alternating arms |
+| Shift | Sprint, including while jumping |
+| L | Turn the hand-held flashlight on/off |
+| V | Inspect full Xbot model / return to first person |
+| Lock Mouse | Optional unlimited turning; Escape unlocks |
+
+The motion, AI and punch logic remain in `src/gameplay.js`; the anatomically styled hand meshes and reusable grip poses are now in `src/hands.js`; the real Xbot and AETHER GLB models and their walking clips remain in `src/characters.js`.
+
+**Verification:** 44 automated gameplay tests passed in the project editing environment, including jump/landing, no double jumping, rounded corners, foot shuffle on turns, chase/escape, and preserved knockout response. The Three.js viewmodels and GPU rendering still need hands-on visual checking in a browser.
 
 ## Version 0.3 — The first actual character models
 
@@ -69,7 +101,7 @@ The game needs WebGL and internet the first time the Three.js dependency is inst
 
 This build intentionally **does not** include the SkyVault, story campaign, character customization, salvage or ScrapForge. The goal is to establish working first-person controls, believable movement, a 3D scene, and punch feedback before adding more systems.
 
-The gameplay math lives in `src/gameplay.js`, independent of the renderer. `tests/gameplay.test.js` contains **34 automated gameplay tests** covering movement, controls, alternating punches, robot patrol, red hit-feedback timing, recoil, reactivation, bag physics, collisions and the flashlight. The renderer is in `src/main.js`, with GLB loading, materials, walking animation mixer and safe fallbacks in `src/characters.js`.
+The gameplay math lives in `src/gameplay.js`, independent of the renderer. `tests/gameplay.test.js` contains **44 automated gameplay tests** covering movement, controls, alternating punches, robot patrol, red hit-feedback timing, recoil, reactivation, bag physics, collisions and the flashlight. The renderer is in `src/main.js`, with GLB loading, materials, walking animation mixer and safe fallbacks in `src/characters.js`.
 
 ### Notes on testing
 
@@ -80,4 +112,4 @@ Gameplay rules are verified using automated unit tests, but the WebGL appearance
 - Game: **Electromageddon**
 - Original working concept: **VOLTBOUND**
 - Repository: `RedBeard-Creative/electro_mageddon`
-- Current milestone: **v0.3 — Rigged player body, animated AETHER-02 robot, alternating fists and hit feedback**
+- Current milestone: **v0.4 — Real jumps, smooth pursuing/searching robot and Xbot-inspired gripping/punching hands**
