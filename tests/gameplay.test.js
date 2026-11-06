@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {
- ROOM,BAG,ROBOT,OBSTACLES,FLASHLIGHT,newGame,forward,right,look,move,bagInRange,robotInRange,makeRobot,updateRobot,punch,update,flashlightToggle
+ ROOM,BAG,ROBOT,OBSTACLES,FLASHLIGHT,JUMP,newGame,forward,right,look,move,jump,updateJump,turnToward,bagInRange,robotInRange,makeRobot,updateRobot,punch,update,flashlightToggle
 } from '../src/gameplay.js';
 
 test('new game starts inside the darkroom facing forward',()=>{
@@ -217,4 +217,84 @@ test('frame times are clamped to avoid physics explosions',()=>{
 });
 test('all crate colliders have defined positive radii',()=>{
  for(const c of OBSTACLES){assert.ok(Number.isFinite(c.x));assert.ok(Number.isFinite(c.z));assert.ok(c.radius>0)}
+});
+
+test('Space jump begins upward motion and lands back on exactly ground zero',()=>{
+ const s=newGame();assert.equal(s.grounded,true);
+ assert.equal(jump(s),true);assert.equal(s.grounded,false);
+ update(s,.05);assert.ok(s.jumpY>0);assert.ok(s.jumpV>0);
+ for(let i=0;i<50;i++)update(s,.05);
+ assert.equal(s.grounded,true);assert.equal(s.jumpY,0);assert.equal(s.jumpV,0);
+});
+test('jump cannot repeat in the air but can start again after landing',()=>{
+ const s=newGame();assert.equal(jump(s),true);
+ assert.equal(jump(s),false);
+ for(let i=0;i<50;i++)update(s,.05);
+ assert.equal(jump(s),true);
+});
+test('running jump remains horizontal and no higher than room ceiling',()=>{
+ const s=newGame();jump(s);let highest=0;
+ for(let i=0;i<30;i++){
+  move(s,1,1,.05,true);update(s,.05);highest=Math.max(highest,s.jumpY)
+ }
+ assert.ok(s.x>0 && s.z<5.6);
+ assert.ok(highest>.70 && highest<JUMP.maxHeight+.01);
+});
+test('robot turnToward wraps the -PI / PI seam along shortest arc',()=>{
+ const r=turnToward(Math.PI-.025,-Math.PI+.025,.02);
+ assert.ok(r.change>0 && r.change<=.02+.00001);
+ assert.ok(Math.abs(r.yaw)<=Math.PI);
+});
+test('patrol corners are rounded: heading does not snap to next segment',()=>{
+ const s=newGame(),r=s.robot;
+ r.x=2.45;r.z=1.45;r.waypoint=2;r.yaw=Math.PI/2;
+ const before=r.yaw,phase=r.footPhase;
+ updateRobot(s,.05);
+ const turned=Math.abs(Math.atan2(Math.sin(r.yaw-before),Math.cos(r.yaw-before)));
+ assert.ok(turned<=ROBOT.turnRate*.05+.00001);
+ assert.ok(turned>.01);
+ assert.equal(r.behavior,'patrol');
+ assert.equal(r.turning,true);
+ assert.ok(r.footPhase>phase,'robot takes small steps when turning');
+});
+test('patrol never instantly flips its entire facing direction',()=>{
+ const s=newGame();s.robot.x=-2.35;s.robot.z=-1.55;
+ s.robot.waypoint=0;s.robot.yaw=2.75;
+ for(let i=0;i<140;i++){
+  const oldYaw=s.robot.yaw;updateRobot(s,.05);
+  const angle=Math.abs(Math.atan2(Math.sin(s.robot.yaw-oldYaw),Math.cos(s.robot.yaw-oldYaw)));
+  assert.ok(angle<=ROBOT.chaseTurnRate*.05+.00001,'robot must turn only a few degrees per update');
+ }
+});
+test('nearby player triggers direct chase and robot follows moving destination',()=>{
+ const s=newGame();s.robot.x=0;s.robot.z=s.z-3;
+ updateRobot(s,.05);
+ assert.equal(s.robot.behavior,'chase');
+ const prev=s.robot.x;
+ s.x=2.5;
+ for(let i=0;i<65;i++)updateRobot(s,.05);
+ assert.ok(s.robot.x>prev+.35,'robot should move toward player latest position, not its patrol waypoint');
+});
+test('chase stops near the player without clipping through them',()=>{
+ const s=newGame();s.robot.x=0;s.robot.z=s.z-2.1;
+ for(let i=0;i<150;i++)updateRobot(s,.05);
+ assert.equal(s.robot.behavior,'chase');
+ const d=Math.hypot(s.robot.x-s.x,s.robot.z-s.z);
+ assert.ok(d>=ROBOT.stopRange-.14);
+});
+test('robot returns from pursuit to patrol after player escapes',()=>{
+ const s=newGame();s.robot.x=0;s.robot.z=s.z-2;
+ updateRobot(s,.05);assert.equal(s.robot.behavior,'chase');
+ s.x=10.5;s.z=10.4;
+ for(let i=0;i<35;i++)updateRobot(s,.05);
+ assert.equal(s.robot.behavior,'patrol');
+});
+test('stagger still pushes the enemy away before it resumes patrol or chase',()=>{
+ const s=newGame();s.robot.x=0;s.robot.z=s.z-1.65;
+ const before=s.robot.z;const result=punch(s);
+ assert.equal(result.target,'robot');
+ assert.equal(s.robot.stagger,ROBOT.staggerSeconds);
+ updateRobot(s,.05);
+ assert.ok(s.robot.z<before);
+ assert.equal(s.robot.walking,false);
 });
