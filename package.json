@@ -1,6 +1,6 @@
 {
   "name": "electro-mageddon",
-  "version": "0.1.0",
+  "version": "0.3.0",
   "private": true,
   "type": "module",
   "scripts": {
@@ -12,7 +12,7 @@
   "devDependencies": {
     "vite": "^8.3.6"
   },
-  "description": "First-person 3D flashlight and punching-bag training room",
+  "description": "First-person 3D Electromageddon robot sparring with actual Xbot and AETHER character models",
   "dependencies": {
     "three": "^0.180.0"
   }
