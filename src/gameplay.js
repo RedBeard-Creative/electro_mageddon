@@ -3,11 +3,14 @@ export const ROOM = Object.freeze({ minX:-11.15,maxX:11.15,minZ:-11.1,maxZ:11.1 
 export const BAG = Object.freeze({ x:0,z:-3.75,radius:.65 });
 export const ROBOT = Object.freeze({
  spawnX:-1.55,spawnZ:1.45,radius:.54,walkSpeed:1.18,reach:2.30,
+ turnRate:2.65,chaseTurnRate:3.3,chaseSpeed:1.65,noticeRadius:3.25,
+ disengageRadius:6.8,stopRange:1.20,
  maxHealth:8,hitFlashSeconds:.85,staggerSeconds:.33,
  waypoints:[[-1.55,1.45],[2.45,1.45],[2.35,-1.55],[-2.3,-1.55]]
 });
 export function makeRobot(){
- return {x:ROBOT.spawnX,z:ROBOT.spawnZ,yaw:Math.PI/2,walking:true,health:ROBOT.maxHealth,
+ return {x:ROBOT.spawnX,z:ROBOT.spawnZ,yaw:Math.PI/2,walking:true,turning:false,health:ROBOT.maxHealth,
+  behavior:'patrol',lostSight:0,footPhase:0,turnAmount:0,
   waypoint:1,hitFlash:0,stagger:0,knockVx:0,knockVz:0,downTimer:0,hitsReceived:0};
 }
 export const FLASHLIGHT = Object.freeze({
@@ -23,10 +26,31 @@ export function forward(yaw){return {x:Math.sin(yaw),z:-Math.cos(yaw)}}
 export function right(yaw){return {x:Math.cos(yaw),z:Math.sin(yaw)}}
 export function newGame(){
   return {x:0,z:5.6,yaw:0,pitch:0,walkPhase:0,isMoving:false,
+    jumpY:0,jumpV:0,grounded:true,landedAt:-10,
     flashlight:true,punchCooldown:0,punchAnim:0,punchArm:'left',totalPunches:0,hits:0,
     robotHits:0,robot:makeRobot(),
     bagTiltX:0,bagTiltZ:0,bagVelX:0,bagVelZ:0,lastHitAt:-100,
     time:0};
+}
+export const JUMP = Object.freeze({impulse:5.4,gravity:15.8,maxHeight:1.15});
+export function jump(state){
+ // One takeoff per landing. Holding Space or repeating keydown cannot double-jump.
+ if(!state.grounded)return false;
+ state.grounded=false;state.jumpV=JUMP.impulse;
+ return true
+}
+export function updateJump(state,dt){
+ dt=clamp(dt,0,.05);
+ if(state.grounded){state.jumpY=0;state.jumpV=0;return}
+ state.jumpV-=JUMP.gravity*dt;
+ state.jumpY+=state.jumpV*dt;
+ if(state.jumpY<=0){state.jumpY=0;state.jumpV=0;state.grounded=true;state.landedAt=state.time}
+}
+export function turnToward(current,goal,maxRadians){
+ // Signed shortest arc even when yaw crosses the -PI/PI seam.
+ const error=Math.atan2(Math.sin(goal-current),Math.cos(goal-current));
+ const change=clamp(error,-maxRadians,maxRadians);
+ return {yaw:Math.atan2(Math.sin(current+change),Math.cos(current+change)),error,change}
 }
 export function look(state,dx,dy,sensitivity=.0035){
   state.yaw+=clamp(dx,-175,175)*sensitivity;
@@ -84,27 +108,57 @@ export function updateRobot(state,dt){
  r.hitFlash=Math.max(0,r.hitFlash-dt);
  r.stagger=Math.max(0,r.stagger-dt);
  if(r.downTimer>0){
-  r.downTimer=Math.max(0,r.downTimer-dt);r.walking=false;
-  if(r.downTimer===0){
-   const fresh=makeRobot();Object.assign(r,fresh);
-  }
+  r.downTimer=Math.max(0,r.downTimer-dt);r.walking=false;r.turning=false;
+  if(r.downTimer===0){Object.assign(r,makeRobot())}
   return;
  }
- // Visible rearward knockback on impact, then a damped recovery.
+ // Preserve the existing backwards stagger impulse on each successful hit.
  if(Math.abs(r.knockVx)+Math.abs(r.knockVz)>.002){
   r.x+=r.knockVx*dt;r.z+=r.knockVz*dt;
-  const friction=Math.exp(-9.0*dt);
+  const friction=Math.exp(-9*dt);
   r.knockVx*=friction;r.knockVz*=friction;
   keepRobotInRoom(r);
  }
- if(r.stagger>0){r.walking=false;return}
- const goal=ROBOT.waypoints[r.waypoint],dx=goal[0]-r.x,dz=goal[1]-r.z,dist=Math.hypot(dx,dz);
- if(dist<.32){r.waypoint=(r.waypoint+1)%ROBOT.waypoints.length;r.walking=true;return}
- const step=Math.min(dist,ROBOT.walkSpeed*dt),nx=dx/dist,nz=dz/dist;
- r.x+=nx*step;r.z+=nz*step;
- // Face the waypoint in the same yaw convention as the player.
- r.yaw=Math.atan2(nx,-nz);r.walking=true;
+ if(r.stagger>0){r.walking=false;r.turning=false;return}
+
+ let dx=state.x-r.x,dz=state.z-r.z,dist=Math.hypot(dx,dz);
+ if(r.behavior==='patrol'&&dist<ROBOT.noticeRadius){r.behavior='chase';r.lostSight=0}
+ if(r.behavior==='chase'){
+  if(dist>ROBOT.disengageRadius)r.lostSight+=dt;
+  else r.lostSight=0;
+  if(r.lostSight>1.1){r.behavior='patrol';r.lostSight=0}
+ }
+ let goalX,goalZ;
+ if(r.behavior==='chase'){
+  goalX=state.x;goalZ=state.z;
+ }else{
+  const waypoint=ROBOT.waypoints[r.waypoint];
+  if(Math.hypot(waypoint[0]-r.x,waypoint[1]-r.z)<.42)
+   r.waypoint=(r.waypoint+1)%ROBOT.waypoints.length;
+  [goalX,goalZ]=ROBOT.waypoints[r.waypoint];
+ }
+ dx=goalX-r.x;dz=goalZ-r.z;dist=Math.hypot(dx,dz);
+ if(dist<.001){r.walking=false;r.turning=false;return}
+ const desiredYaw=Math.atan2(dx,-dz);
+ const rotate=turnToward(r.yaw,desiredYaw,
+  (r.behavior==='chase'?ROBOT.chaseTurnRate:ROBOT.turnRate)*dt);
+ r.yaw=rotate.yaw;
+ const remain=Math.atan2(Math.sin(desiredYaw-r.yaw),Math.cos(desiredYaw-r.yaw));
+ r.turnAmount=Math.min(1,Math.abs(rotate.error)/1.6);
+ r.turning=Math.abs(remain)>.07 || Math.abs(rotate.change)>.04;
+ // Face in the direction of travel. At sharp corners, slow down and STEP
+ // while turning instead of sliding sideways or snapping 90 degrees.
+ const alignment=Math.max(0,Math.cos(remain));
+ const turnSlowdown=.10+.90*alignment*alignment;
+ const speed=(r.behavior==='chase'?ROBOT.chaseSpeed:ROBOT.walkSpeed)*turnSlowdown;
+ const stopping=(r.behavior==='chase'&&dist<=ROBOT.stopRange);
+ const step=stopping?0:Math.min(speed*dt,Math.max(0,dist-(r.behavior==='chase'?ROBOT.stopRange:.02)));
+ r.x+=Math.sin(r.yaw)*step;
+ r.z-=Math.cos(r.yaw)*step;
  keepRobotInRoom(r);
+ // Shuffling feet animate even if the torso is pivoting almost in place.
+ r.walking=step>.001;
+ if(r.walking||r.turning)r.footPhase+=dt*(r.walking?7.5:3.4);
 }
 export function punch(state){
   if(state.punchCooldown>0)return {performed:false,hit:false};
@@ -140,6 +194,7 @@ export function update(state,dt){
   state.time+=dt;
   state.punchCooldown=Math.max(0,state.punchCooldown-dt);
   state.punchAnim=Math.max(0,state.punchAnim-dt);
+  updateJump(state,dt);
   updateRobot(state,dt);
   // Damped pendulum at a heavy chain, with modest swing limits.
   const spring=10.5,drag=Math.exp(-1.65*dt);
