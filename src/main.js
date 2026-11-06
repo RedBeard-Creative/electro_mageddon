@@ -1,6 +1,7 @@
 import './style.css';
 import * as THREE from 'three';
-import {ROOM,BAG,OBSTACLES,FLASHLIGHT,newGame,look,move,punch,update,bagInRange,flashlightToggle} from './gameplay.js';
+import {ROOM,BAG,ROBOT,OBSTACLES,FLASHLIGHT,newGame,look,move,punch,update,bagInRange,robotInRange,flashlightToggle} from './gameplay.js';
+import {createCharacterActor} from './characters.js';
 
 // ELECTROMAGEDDON / PROTOTYPE 01 — one small, intentionally playable room.
 const $ = id => document.getElementById(id);
@@ -8,6 +9,7 @@ const canvas=$('world'),status=$('flash-status'),hits=$('hit-count'),target=$('t
 const message=$('message'),flash=$('hit-flash'),lockButton=$('lock-mouse');
 const state=newGame(),pressed=new Set();
 let renderer,scene,camera,clock,pivot,torch,beam,rigLeft,rigRight,impactGlow;
+let playerActor=null,robotActor=null,inspectCharacter=false;
 let flashTimer=0,noticeTimeout=0,lastMouse=null;
 const MAT={
  floor:new THREE.MeshStandardMaterial({color:0x2b3840,roughness:.89,metalness:.16}),
@@ -240,9 +242,13 @@ function tryPunch(){
  if(outcome.hit){
   hits.textContent=String(state.hits).padStart(2,'0');
   flashTimer=.19;flash.style.opacity='.7';
-  announce('DIRECT HIT! Bag is swinging.');impactGlow.intensity=3.8;
+  if(outcome.target==='robot'){
+    announce('DIRECT HIT · AETHER-02 STAGGERED · '+state.robot.health+'/'+ROBOT.maxHealth+' ARMOR');
+  }else{
+    announce('DIRECT HIT! Training bag is swinging.');impactGlow.intensity=3.8;
+  }
  }else{
-  announce('Too far away — face the bag and move closer.');
+  announce('Move close to AETHER-02, face it, and punch with F.');
  }
 }
 function handleMouse(e){
@@ -258,10 +264,15 @@ function handleMouse(e){
 function bindInput(){
  const navigation=new Set(['ArrowUp','ArrowDown','ArrowLeft','ArrowRight',' ','KeyW','KeyA','KeyS','KeyD']);
  window.addEventListener('keydown',e=>{
-  if(navigation.has(e.code)||['KeyF','KeyL','ShiftLeft','ShiftRight'].includes(e.code))e.preventDefault();
+  if(navigation.has(e.code)||['KeyF','KeyL','KeyV','ShiftLeft','ShiftRight'].includes(e.code))e.preventDefault();
   pressed.add(e.code);
   if(e.repeat)return;
   if(e.code==='KeyF'||e.code==='Space')tryPunch();
+  if(e.code==='KeyV'){
+    inspectCharacter=!inspectCharacter;
+    if(playerActor)playerActor.setFirstPersonClip(!inspectCharacter);
+    announce(inspectCharacter?'Character inspection view. Press V for first person.':'First-person view restored.');
+  }
   if(e.code==='KeyL'){
     const enabled=flashlightToggle(state);
     torch.visible=enabled;beam.visible=enabled;status.textContent=enabled?'LIGHT ON':'LIGHT OFF';
@@ -300,21 +311,45 @@ function animate(){
  const run=pressed.has('ShiftLeft')||pressed.has('ShiftRight');
  move(state,lr,fb,dt,run);
  update(state,dt);
- camera.position.set(state.x,1.69+(state.isMoving?Math.sin(state.walkPhase*2)*.018:Math.sin(state.time*1.6)*.006),state.z);
- camera.rotation.order='YXZ';
- camera.rotation.set(state.pitch,-state.yaw,0);
+ const cameraY=1.69+(state.isMoving?Math.sin(state.walkPhase*2)*.018:Math.sin(state.time*1.6)*.006);
+ if(inspectCharacter){
+   // Optional third-person preview, while movement always stays view-relative.
+   const fx=Math.sin(state.yaw),fz=-Math.cos(state.yaw);
+   camera.position.set(state.x-fx*3.35,2.30,state.z-fz*3.35);
+   camera.lookAt(state.x,1.24,state.z);
+ }else{
+   camera.position.set(state.x,cameraY,state.z);
+   camera.rotation.order='YXZ';
+   camera.rotation.set(state.pitch,-state.yaw,0);
+ }
  const thrust=state.punchAnim>0?Math.sin(Math.PI*(1-state.punchAnim/.33)):0;
  const bob=state.isMoving?Math.sin(state.walkPhase)*.011:Math.sin(state.time*1.2)*.004;
  for(const [arm,side] of [[rigLeft,-1],[rigRight,1]]){
-  const v=side>0?thrust:0;
-  arm.position.set(side*.43-v*.32,-.49+v*.16+bob*(side>0?1:-1),-.72-v*.69);
-  arm.rotation.set(-.10-v*.19,side*.09-v*.25,side*.02-v*.08);
+  const punching=state.punchArm===(side===-1?'left':'right');
+  const v=punching?thrust:0;
+  arm.visible=!inspectCharacter;
+  arm.position.set(side*.43-v*side*.29,-.49+v*.13+bob*(side>0?1:-1),-.72-v*.82);
+  arm.rotation.set(-.10-v*.25,side*.09-v*side*.16,side*.02-v*side*.04);
+ }
+ if(playerActor){
+  playerActor.root.position.set(state.x,0,state.z);
+  playerActor.root.rotation.y=Math.PI-state.yaw;
+  playerActor.update(dt,state.isMoving,state.time,0,false,run);
+ }
+ if(robotActor){
+  const bot=state.robot;
+  robotActor.root.position.set(bot.x,0,bot.z);
+  robotActor.root.rotation.y=Math.PI-bot.yaw;
+  // A small visual recoil complements the physical backwards movement.
+  robotActor.root.rotation.x=bot.stagger>0?-.13*(bot.stagger/ROBOT.staggerSeconds):0;
+  robotActor.update(dt,bot.walking,state.time,bot.hitFlash>0?Math.min(1,bot.hitFlash/ROBOT.hitFlashSeconds+.15):0,bot.stagger>0||bot.downTimer>0);
  }
  if(pivot){pivot.rotation.x=state.bagTiltX;pivot.rotation.z=state.bagTiltZ}
  if(flashTimer>0){flashTimer-=dt;if(flashTimer<=0)flash.style.opacity='0'}
  impactGlow.intensity=Math.max(0,impactGlow.intensity-dt*15);
- target.textContent=bagInRange(state)?'[ F ] PUNCH TRAINER 01':'';
- $('crosshair').classList.toggle('ready',bagInRange(state));
+ const robotTarget=robotInRange(state),bagTarget=bagInRange(state);
+ target.textContent=robotTarget?'[ F ] PUNCH AETHER-02':bagTarget?'[ F ] PUNCH BAG':'';
+ $('crosshair').classList.toggle('ready',robotTarget||bagTarget);
  renderer.render(scene,camera);
 }
 function init(){
@@ -326,6 +361,7 @@ function init(){
   renderer.toneMapping=THREE.ACESFilmicToneMapping;
   renderer.toneMappingExposure=1.5;
   renderer.shadowMap.enabled=true;
+  renderer.localClippingEnabled=true;
   renderer.shadowMap.type=THREE.PCFSoftShadowMap;
   scene=new THREE.Scene();scene.background=new THREE.Color(0x05090f);
   scene.fog=new THREE.FogExp2(0x05090f,.032);
@@ -334,11 +370,17 @@ function init(){
   camera.position.set(state.x,1.69,state.z);
   scene.add(camera);
   buildRoom();createPunchingBag();
+  playerActor=createCharacterActor(scene,'player',{onAssetStatus:(role,s)=>{if($('avatar-status'))$('avatar-status').textContent='PLAYER: '+s;}});
+  playerActor.setFirstPersonClip(true);
+  robotActor=createCharacterActor(scene,'robot',{onAssetStatus:(role,s)=>{if($('robot-status'))$('robot-status').textContent='ENEMY: '+s;}});
+  // The target is lit just enough to stand out without brightening the room.
+  const robotMarker=new THREE.PointLight(0x7fc9d7,2.3,3.4,2);
+  robotMarker.position.set(0,1.50,0);robotActor.root.add(robotMarker);
   rigLeft=makeArm(-1);rigRight=makeArm(1);attachFlashlight();
   resize();bindInput();
   clock=new THREE.Clock();
   $('loading').hidden=true;
-  announce('Find the bag in the flashlight beam. Arrow keys to move; F to punch.');
+  announce('Find AETHER-02 moving through the darkroom. Approach and press F to punch.');
   renderer.setAnimationLoop(animate);
  }catch(error){
   console.error('Electromageddon initialization failed:',error);
