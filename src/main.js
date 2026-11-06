@@ -316,6 +316,7 @@ function animate(){
  }
  if(robotActor){
   const bot=state.robot;
+  $('ai-mode').textContent=bot.behavior==='chase'?'AI PURSUIT':'AI PATROL';
   robotActor.root.position.set(bot.x,0,bot.z);
   robotActor.root.rotation.y=Math.PI-bot.yaw;
   // A small visual recoil complements the physical backwards movement.
