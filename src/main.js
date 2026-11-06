@@ -199,19 +199,19 @@ function makeArm(side){
  return root
 }
 function attachFlashlight(){
- torch=new THREE.SpotLight(0xd9eeff,94,24,.33,.8,1.5);
+ torch=new THREE.SpotLight(0xe2f4ff,235,36,.57,.72,1.3);
  torch.position.set(-.19,-.1,0);
  torch.target.position.set(0,0,-9.5);
  torch.castShadow=true;torch.shadow.mapSize.set(768,768);torch.shadow.bias=-.00015;
- torch.shadow.camera.near=.13;torch.shadow.camera.far=20;
+ torch.shadow.camera.near=.13;torch.shadow.camera.far=35;
  camera.add(torch,torch.target);
- const cone=new THREE.CylinderGeometry(2.3,.02,9,32,1,true);
+ const cone=new THREE.CylinderGeometry(6.2,.02,12,40,1,true);
  cone.rotateX(-Math.PI/2);
  beam=new THREE.Mesh(cone,new THREE.MeshBasicMaterial({
-  color:0x94c5d8,transparent:true,opacity:.024,side:THREE.BackSide,
+  color:0xb4def2,transparent:true,opacity:.035,side:THREE.BackSide,
   depthWrite:false,blending:THREE.AdditiveBlending,fog:false
  }));
- beam.position.set(-.10,-.04,-4.5);
+ beam.position.set(-.10,-.04,-6);
  beam.renderOrder=7;camera.add(beam);
  const frame=box(camera,.14,.12,.29,MAT.graphite,-.19,-.13,-.25);
  frame.castShadow=false;
