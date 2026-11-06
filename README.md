@@ -1,8 +1,14 @@
-# ⚡ ELECTROMAGEDDON — Prototype 01: Darkroom
+# ⚡ ELECTROMAGEDDON — Prototype 02: Punching Bag + Flashlight
 
 A small, playable **3D first-person action prototype** built with Three.js and Vite. This is the beginning of Electromageddon—not the full robot-apocalypse adventure yet.
 
 **[▶ Play / edit in StackBlitz](https://stackblitz.com/~/github.com/RedBeard-Creative/electro_mageddon)**
+
+## Version 0.2 changes
+
+- **Punching bag direction fixed:** the bottom of the bag now travels *away* from the character when struck, whether you stand in front, behind, left, or right. The swinging pendulum still damps naturally.
+- **Bigger, brighter flashlight:** spotlight intensity increased from 94 to 235, range from 24 to 36 world units, and half-angle from 0.33 to 0.57 radians. The visible beam is wider and longer, while the rest of the room stays dark.
+- **25 gameplay checks passed** including all-direction bag impulse tests and flashlight parameter checks. Graphics appearance still needs direct inspection in a browser.
 
 ## What's in the first version?
 
@@ -61,4 +67,4 @@ Gameplay rules are verified using automated unit tests, but the WebGL appearance
 - Game: **Electromageddon**
 - Original working concept: **VOLTBOUND**
 - Repository: `RedBeard-Creative/electro_mageddon`
-- Current milestone: **v0.1 — Darkroom with a punching bag**
+- Current milestone: **v0.2 — Corrected bag swing and stronger flashlight**
