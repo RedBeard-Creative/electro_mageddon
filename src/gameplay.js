@@ -10,7 +10,7 @@ export const ROBOT = Object.freeze({
 });
 export function makeRobot(){
  return {x:ROBOT.spawnX,z:ROBOT.spawnZ,yaw:Math.PI/2,walking:true,turning:false,health:ROBOT.maxHealth,
-  behavior:'patrol',lostSight:0,footPhase:0,turnAmount:0,
+  behavior:'patrol',lostSight:0,footPhase:0,turnAmount:0,turnDirection:0,
   waypoint:1,hitFlash:0,stagger:0,knockVx:0,knockVz:0,downTimer:0,hitsReceived:0};
 }
 export const FLASHLIGHT = Object.freeze({
@@ -145,6 +145,7 @@ export function updateRobot(state,dt){
  r.yaw=rotate.yaw;
  const remain=Math.atan2(Math.sin(desiredYaw-r.yaw),Math.cos(desiredYaw-r.yaw));
  r.turnAmount=Math.min(1,Math.abs(rotate.error)/1.6);
+ r.turnDirection=Math.sign(rotate.change);
  r.turning=Math.abs(remain)>.07 || Math.abs(rotate.change)>.04;
  // Face in the direction of travel. At sharp corners, slow down and STEP
  // while turning instead of sliding sideways or snapping 90 degrees.
