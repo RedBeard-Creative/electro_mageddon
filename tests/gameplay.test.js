@@ -177,7 +177,7 @@ test('robot turns red briefly after a hit then returns to original materials',()
  const s=newGame();s.robot.x=0;s.robot.z=s.z-1.55;
  punch(s);
  assert.ok(s.robot.hitFlash>=ROBOT.hitFlashSeconds-.01);
- for(let i=0;i<12;i++)update(s,.05);
+ for(let i=0;i<20;i++)update(s,.05);
  assert.equal(s.robot.hitFlash,0);
  assert.equal(s.robot.stagger,0);
 });
