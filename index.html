@@ -1,13 +1,34 @@
 <!doctype html>
 <html lang="en">
-  <head>
-    <meta charset="UTF-8" />
-    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Vite + JS</title>
-  </head>
-  <body>
-    <div id="app"></div>
-    <script type="module" src="/src/main.js"></script>
-  </body>
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1.0,maximum-scale=1" />
+  <meta name="theme-color" content="#070b10" />
+  <meta name="description" content="Electromageddon: first-person robot training room" />
+  <title>ELECTROMAGEDDON | Training Room v0.1</title>
+</head>
+<body>
+  <div id="app">
+    <canvas id="world" aria-label="First-person 3D training room"></canvas>
+    <div id="vignette" aria-hidden="true"></div>
+    <div id="hud">
+      <header class="top-bar">
+        <div class="brand"><span class="bolt">⚡</span><div><strong>ELECTROMAGEDDON</strong><small>PROTOTYPE 01 / DARKROOM</small></div></div>
+        <div class="status"><span class="live-dot"></span><span>SUIT ONLINE</span><span class="split">/</span><span id="flash-status">LIGHT ON</span></div>
+      </header>
+      <div class="objective"><span class="section-label">TRAINING TASK</span><strong>Strike the punching bag</strong><span>Approach it and press <kbd>F</kbd> to punch.</span></div>
+      <div id="crosshair" aria-hidden="true"><span></span><span></span></div>
+      <div id="target" aria-live="polite"></div>
+      <div id="hit-flash" aria-hidden="true"></div>
+      <div class="bottom-bar">
+        <div class="telemetry"><span class="section-label">COMBAT LOG</span><strong><span id="hit-count">00</span> <small>HITS</small></strong><span id="message">Move toward the hanging bag.</span></div>
+        <div class="quick-keys"><span><kbd>↑</kbd><kbd>↓</kbd><kbd>←</kbd><kbd>→</kbd> MOVE</span><span><kbd>MOUSE</kbd> LOOK</span><span><kbd>F</kbd> PUNCH</span><span><kbd>L</kbd> LIGHT</span></div>
+        <div class="actions"><button id="lock-mouse" type="button" title="Optional: lock the mouse for unlimited turning">LOCK MOUSE</button><button id="punch" type="button">PUNCH <kbd>F</kbd></button></div>
+      </div>
+    </div>
+    <div id="loading" role="status"><div class="loading-content"><span class="loading-icon">⚡</span><strong>INITIALIZING DARKROOM</strong><span id="loading-detail">Starting the 3D engine…</span><div class="loading-line"><span></span></div></div></div>
+    <div id="fatal" hidden><h1>3D engine could not start</h1><p id="fatal-message"></p><button onclick="location.reload()">Try again</button></div>
+  </div>
+  <script type="module" src="/src/main.js"></script>
+</body>
 </html>
