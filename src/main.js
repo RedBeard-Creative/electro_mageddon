@@ -1,7 +1,8 @@
 import './style.css';
 import * as THREE from 'three';
-import {ROOM,BAG,ROBOT,OBSTACLES,FLASHLIGHT,newGame,look,move,punch,update,bagInRange,robotInRange,flashlightToggle} from './gameplay.js';
+import {ROOM,BAG,ROBOT,OBSTACLES,FLASHLIGHT,newGame,look,move,jump,punch,update,bagInRange,robotInRange,flashlightToggle} from './gameplay.js';
 import {createCharacterActor} from './characters.js';
+import {createXbotViewHand} from './hands.js';
 
 // ELECTROMAGEDDON / PROTOTYPE 01 — one small, intentionally playable room.
 const $ = id => document.getElementById(id);
@@ -167,39 +168,6 @@ function createPunchingBag(){
  impactGlow.position.set(0,-2.05,0);pivot.add(impactGlow);
  return bagBody
 }
-function makeArm(side){
- // Full 3D mechanical gauntlet. It uses moving 3D pieces rather than a flat image.
- const root=new THREE.Group();camera.add(root);
- const s=side;
- const arm=new THREE.Group();root.add(arm);
- const fore=cylinder(arm,.123,.17,.65,MAT.graphite,0,-.02,-.11,12);
- fore.rotation.x=Math.PI/2;
- const under=cylinder(arm,.09,.10,.54,MAT.black,0,-.065,-.14,12);
- under.rotation.x=Math.PI/2;
- for(const z of [.02,-.22]){
-  const brace=box(arm,.32,.15,.12,MAT.steel,0,.065,z);
-  brace.rotation.x=-.13;
- }
- // Beveled plates along the armor.
- const plate=box(arm,.25,.05,.42,MAT.chrome,0,.145,-.17);
- plate.rotation.x=-.07;
- const wrist=cylinder(arm,.118,.118,.16,MAT.steel,0,-.04,-.46,12);
- wrist.rotation.x=Math.PI/2;
- const hand=box(arm,.28,.20,.28,MAT.graphite,0,-.04,-.63);
- box(arm,.31,.075,.16,MAT.chrome,0,.04,-.73);
- for(let i=0;i<4;i++){
-  const finger=box(arm,.062,.105,.18,i%2?MAT.steel:MAT.graphite,-.105+i*.07,-.082,-.83);
-  finger.rotation.x=.14;
- }
- const thumb=box(arm,.09,.1,.19,MAT.steel,s*.18,-.11,-.62);
- thumb.rotation.y=s*.32;
- for(const x of [-.11,.11])box(arm,.027,.06,.37,MAT.teal,x,.13,-.19);
- ball(arm,.06,MAT.amber,0,.13,-.55);
- root.userData={restX:s*.43,restY:-.49,restZ:-.72};
- root.position.set(root.userData.restX,root.userData.restY,root.userData.restZ);
- root.rotation.set(-.10,s*.09,s*.02);
- return root
-}
 function attachFlashlight(){
  torch=new THREE.SpotLight(0xe2f4ff,FLASHLIGHT.intensity,FLASHLIGHT.distance,FLASHLIGHT.angle,FLASHLIGHT.penumbra,FLASHLIGHT.decay);
  torch.position.set(-.19,-.1,0);
@@ -264,10 +232,13 @@ function handleMouse(e){
 function bindInput(){
  const navigation=new Set(['ArrowUp','ArrowDown','ArrowLeft','ArrowRight',' ','KeyW','KeyA','KeyS','KeyD']);
  window.addEventListener('keydown',e=>{
-  if(navigation.has(e.code)||['KeyF','KeyL','KeyV','ShiftLeft','ShiftRight'].includes(e.code))e.preventDefault();
+  if(navigation.has(e.code)||['KeyF','KeyJ','KeyL','KeyV','ShiftLeft','ShiftRight'].includes(e.code))e.preventDefault();
   pressed.add(e.code);
   if(e.repeat)return;
-  if(e.code==='KeyF'||e.code==='Space')tryPunch();
+  if(e.code==='KeyF')tryPunch();
+  if(e.code==='Space'||e.code==='KeyJ'){
+    if(jump(state))announce('Jump activated — tap Space again once you land.');
+  }
   if(e.code==='KeyV'){
     inspectCharacter=!inspectCharacter;
     if(playerActor)playerActor.setFirstPersonClip(!inspectCharacter);
@@ -311,30 +282,32 @@ function animate(){
  const run=pressed.has('ShiftLeft')||pressed.has('ShiftRight');
  move(state,lr,fb,dt,run);
  update(state,dt);
- const cameraY=1.69+(state.isMoving?Math.sin(state.walkPhase*2)*.018:Math.sin(state.time*1.6)*.006);
+ const cameraY=1.69+state.jumpY+(state.grounded&&state.isMoving?Math.sin(state.walkPhase*2)*.018:Math.sin(state.time*1.6)*.006);
  if(inspectCharacter){
    // Optional third-person preview, while movement always stays view-relative.
    const fx=Math.sin(state.yaw),fz=-Math.cos(state.yaw);
-   camera.position.set(state.x-fx*3.35,2.30,state.z-fz*3.35);
-   camera.lookAt(state.x,1.24,state.z);
+   camera.position.set(state.x-fx*3.35,2.30+state.jumpY,state.z-fz*3.35);
+   camera.lookAt(state.x,1.24+state.jumpY,state.z);
  }else{
    camera.position.set(state.x,cameraY,state.z);
    camera.rotation.order='YXZ';
-   camera.rotation.set(state.pitch,-state.yaw,0);
+   camera.rotation.set(state.pitch,state.yaw,0);
  }
  const thrust=state.punchAnim>0?Math.sin(Math.PI*(1-state.punchAnim/.33)):0;
  const bob=state.isMoving?Math.sin(state.walkPhase)*.011:Math.sin(state.time*1.2)*.004;
- for(const [arm,side] of [[rigLeft,-1],[rigRight,1]]){
+ for(const [hand,side] of [[rigLeft,-1],[rigRight,1]]){
   const punching=state.punchArm===(side===-1?'left':'right');
   const v=punching?thrust:0;
+  hand.update(dt,v>.04);
+  const arm=hand.root;
   arm.visible=!inspectCharacter;
-  arm.position.set(side*.43-v*side*.29,-.49+v*.13+bob*(side>0?1:-1),-.72-v*.82);
-  arm.rotation.set(-.10-v*.25,side*.09-v*side*.16,side*.02-v*side*.04);
+  arm.position.set(side*.42-v*side*.21,-.46+v*.11+bob*(side>0?1:-1),-.69-v*.79);
+  arm.rotation.set(-.10-v*.27,side*.08-v*side*.12,side*.02-v*side*.025);
  }
  if(playerActor){
-  playerActor.root.position.set(state.x,0,state.z);
+  playerActor.root.position.set(state.x,state.jumpY,state.z);
   playerActor.root.rotation.y=Math.PI-state.yaw;
-  playerActor.update(dt,state.isMoving,state.time,0,false,run);
+  playerActor.update(dt,state.isMoving&&state.grounded,state.time,0,false,run);
  }
  if(robotActor){
   const bot=state.robot;
@@ -342,7 +315,10 @@ function animate(){
   robotActor.root.rotation.y=Math.PI-bot.yaw;
   // A small visual recoil complements the physical backwards movement.
   robotActor.root.rotation.x=bot.stagger>0?-.13*(bot.stagger/ROBOT.staggerSeconds):0;
-  robotActor.update(dt,bot.walking,state.time,bot.hitFlash>0?Math.min(1,bot.hitFlash/ROBOT.hitFlashSeconds+.15):0,bot.stagger>0||bot.downTimer>0);
+  robotActor.root.rotation.z=bot.turning?-.045*bot.turnAmount*Math.sign(bot.turnDirection||1):0;
+  robotActor.update(dt,bot.walking||bot.turning,state.time,
+   bot.hitFlash>0?Math.min(1,bot.hitFlash/ROBOT.hitFlashSeconds+.15):0,
+   bot.stagger>0||bot.downTimer>0,false,bot.turning);
  }
  if(pivot){pivot.rotation.x=state.bagTiltX;pivot.rotation.z=state.bagTiltZ}
  if(flashTimer>0){flashTimer-=dt;if(flashTimer<=0)flash.style.opacity='0'}
@@ -376,11 +352,11 @@ function init(){
   // The target is lit just enough to stand out without brightening the room.
   const robotMarker=new THREE.PointLight(0x7fc9d7,2.3,3.4,2);
   robotMarker.position.set(0,1.50,0);robotActor.root.add(robotMarker);
-  rigLeft=makeArm(-1);rigRight=makeArm(1);attachFlashlight();
+  rigLeft=createXbotViewHand(camera,-1);rigRight=createXbotViewHand(camera,1);attachFlashlight();
   resize();bindInput();
   clock=new THREE.Clock();
   $('loading').hidden=true;
-  announce('Find AETHER-02 moving through the darkroom. Approach and press F to punch.');
+  announce('Patrol robot walks the room. Space to jump; F to punch; get close and it will chase you.');
   renderer.setAnimationLoop(animate);
  }catch(error){
   console.error('Electromageddon initialization failed:',error);
