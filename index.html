@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width,initial-scale=1.0,maximum-scale=1" />
   <meta name="theme-color" content="#070b10" />
   <meta name="description" content="Electromageddon: first-person robot training room" />
-  <title>ELECTROMAGEDDON | Training Room v0.1</title>
+  <title>ELECTROMAGEDDON | Robot Training v0.3</title>
 </head>
 <body>
   <div id="app">
@@ -13,16 +13,16 @@
     <div id="vignette" aria-hidden="true"></div>
     <div id="hud">
       <header class="top-bar">
-        <div class="brand"><span class="bolt">⚡</span><div><strong>ELECTROMAGEDDON</strong><small>PROTOTYPE 01 / DARKROOM</small></div></div>
+        <div class="brand"><span class="bolt">⚡</span><div><strong>ELECTROMAGEDDON</strong><small>PROTOTYPE 03 / AETHER TRAINING</small></div></div>
         <div class="status"><span class="live-dot"></span><span>SUIT ONLINE</span><span class="split">/</span><span id="flash-status">LIGHT ON</span></div>
       </header>
-      <div class="objective"><span class="section-label">TRAINING TASK</span><strong>Strike the punching bag</strong><span>Approach it and press <kbd>F</kbd> to punch.</span></div>
+      <div class="objective"><span class="section-label">TRAINING TASK</span><strong>Hit the roaming robot</strong><span>Track AETHER-02, get close, and press <kbd>F</kbd>. Punches alternate arms.</span><span id="avatar-status" class="model-status">PLAYER: LOADING MODEL…</span><span id="robot-status" class="model-status">ENEMY: LOADING MODEL…</span></div>
       <div id="crosshair" aria-hidden="true"><span></span><span></span></div>
       <div id="target" aria-live="polite"></div>
       <div id="hit-flash" aria-hidden="true"></div>
       <div class="bottom-bar">
-        <div class="telemetry"><span class="section-label">COMBAT LOG</span><strong><span id="hit-count">00</span> <small>HITS</small></strong><span id="message">Move toward the hanging bag.</span></div>
-        <div class="quick-keys"><span><kbd>↑</kbd><kbd>↓</kbd><kbd>←</kbd><kbd>→</kbd> MOVE</span><span><kbd>MOUSE</kbd> LOOK</span><span><kbd>F</kbd> PUNCH</span><span><kbd>L</kbd> LIGHT</span></div>
+        <div class="telemetry"><span class="section-label">COMBAT LOG</span><strong><span id="hit-count">00</span> <small>HITS</small></strong><span id="message">Follow the moving AETHER-02 robot.</span></div>
+        <div class="quick-keys"><span><kbd>↑</kbd><kbd>↓</kbd><kbd>←</kbd><kbd>→</kbd> MOVE</span><span><kbd>MOUSE</kbd> LOOK</span><span><kbd>F</kbd> PUNCH</span><span><kbd>L</kbd> LIGHT</span><span><kbd>V</kbd> VIEW MODEL</span></div>
         <div class="actions"><button id="lock-mouse" type="button" title="Optional: lock the mouse for unlimited turning">LOCK MOUSE</button><button id="punch" type="button">PUNCH <kbd>F</kbd></button></div>
       </div>
     </div>
