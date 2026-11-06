@@ -3,7 +3,7 @@ export const ROOM = Object.freeze({ minX:-11.15,maxX:11.15,minZ:-11.1,maxZ:11.1 
 export const BAG = Object.freeze({ x:0,z:-3.75,radius:.65 });
 export const ROBOT = Object.freeze({
  spawnX:-1.55,spawnZ:1.45,radius:.54,walkSpeed:1.18,reach:2.30,
- maxHealth:8,hitFlashSeconds:.48,staggerSeconds:.33,
+ maxHealth:8,hitFlashSeconds:.85,staggerSeconds:.33,
  waypoints:[[-1.55,1.45],[2.45,1.45],[2.35,-1.55],[-2.3,-1.55]]
 });
 export function makeRobot(){
