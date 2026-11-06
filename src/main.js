@@ -169,23 +169,27 @@ function createPunchingBag(){
  return bagBody
 }
 function attachFlashlight(){
- torch=new THREE.SpotLight(0xe2f4ff,FLASHLIGHT.intensity,FLASHLIGHT.distance,FLASHLIGHT.angle,FLASHLIGHT.penumbra,FLASHLIGHT.decay);
- torch.position.set(-.19,-.1,0);
- torch.target.position.set(0,0,-9.5);
+ // Mount the torch in the same articulated left hand that grasps tools.
+ // Its beam moves subtly with the player's hands, rather than floating.
+ const holder=rigLeft.root;
+ torch=new THREE.SpotLight(0xe2f4ff,FLASHLIGHT.intensity,FLASHLIGHT.distance,
+  FLASHLIGHT.angle,FLASHLIGHT.penumbra,FLASHLIGHT.decay);
+ torch.position.set(-.014,-.075,-.74);
+ torch.target.position.set(-.014,-.07,-9.4);
  torch.castShadow=true;torch.shadow.mapSize.set(768,768);torch.shadow.bias=-.00015;
  torch.shadow.camera.near=.13;torch.shadow.camera.far=35;
- camera.add(torch,torch.target);
+ holder.add(torch,torch.target);
  const cone=new THREE.CylinderGeometry(FLASHLIGHT.beamRadius,.02,FLASHLIGHT.beamLength,40,1,true);
  cone.rotateX(-Math.PI/2);
  beam=new THREE.Mesh(cone,new THREE.MeshBasicMaterial({
   color:0xb4def2,transparent:true,opacity:FLASHLIGHT.beamOpacity,side:THREE.BackSide,
   depthWrite:false,blending:THREE.AdditiveBlending,fog:false
  }));
- beam.position.set(-.10,-.04,-FLASHLIGHT.beamLength/2);
- beam.renderOrder=7;camera.add(beam);
- const frame=box(camera,.14,.12,.29,MAT.graphite,-.19,-.13,-.25);
- frame.castShadow=false;
- const lens=cylinder(camera,.069,.069,.025,MAT.teal,-.19,-.13,-.39,16);
+ beam.position.set(-.014,-.075,-.74-FLASHLIGHT.beamLength/2);
+ beam.renderOrder=7;holder.add(beam);
+ const body=cylinder(holder,.066,.075,.27,MAT.graphite,-.014,-.077,-.60,16);
+ body.rotation.x=Math.PI/2;body.castShadow=false;
+ const lens=cylinder(holder,.078,.078,.028,MAT.teal,-.014,-.077,-.755,16);
  lens.rotation.x=Math.PI/2;lens.castShadow=false;
 }
 function announce(str){message.textContent=str}
@@ -298,6 +302,7 @@ function animate(){
  for(const [hand,side] of [[rigLeft,-1],[rigRight,1]]){
   const punching=state.punchArm===(side===-1?'left':'right');
   const v=punching?thrust:0;
+  hand.setGrip(side===-1&&state.flashlight?'hold':'ready');
   hand.update(dt,v>.04);
   const arm=hand.root;
   arm.visible=!inspectCharacter;
