@@ -49,11 +49,14 @@ function buildFallback(materialColor=0x647783){
   legs.push(hip);
  }
  const materials=[suit,trim,accent];
- return {root,materials,animateWalk(t,motion){
-  const stride=motion?Math.sin(t*7.5)*.30:0;
+ return {root,materials,animateWalk(t,motion,turning=false){
+  // Slow alternating feet while pivoting in place: no hovering spin.
+  const speed=turning&&!motion?3.9:7.5;
+  const strength=turning&&!motion?.17:motion?.30:0;
+  const stride=Math.sin(t*speed)*strength;
   legs[0].rotation.x=stride;legs[1].rotation.x=-stride;
   arms[0].rotation.x=-stride*.65;arms[1].rotation.x=stride*.65;
-  torso.position.y=1.26+(motion?Math.abs(Math.sin(t*7.5))*.025:0);
+  torso.position.y=1.26+((motion||turning)?Math.abs(Math.sin(t*speed))*.014:0);
  }};
 }
 function gatherMaterials(object){
@@ -159,18 +162,20 @@ export function createCharacterActor(parent,role,{onAssetStatus=()=>{}}={}){
     mat.needsUpdate=true;
    }
   },
-  update(dt,walk,time,flash=0,stunned=false,sprinting=false){
+  update(dt,walk,time,flash=0,stunned=false,sprinting=false,turning=false){
    localTime+=dt;
    if(mixer){
+    const moving=walk||turning;
     const goal=stunned?(actions.idle||null):
-      (walk?(sprinting?actions.run||actions.walk:actions.walk||actions.run):actions.idle)||null;
+      (moving?(sprinting&&!turning?actions.run||actions.walk:actions.walk||actions.run):actions.idle)||null;
     if(goal&&goal!==currentAction){
      if(currentAction)currentAction.fadeOut(.17);
      goal.reset().fadeIn(.17).play();
      currentAction=goal;
     }
+    if(goal)goal.setEffectiveTimeScale(turning&&!walk?.55:1);
     mixer.update(dt);
-   }else fallback.animateWalk(localTime,walk&&!stunned);
+   }else fallback.animateWalk(localTime,walk&&!stunned,turning&&!stunned);
    applyFlash(flash);
   },
   dispose(){
