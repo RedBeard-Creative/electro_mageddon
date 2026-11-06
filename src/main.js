@@ -126,6 +126,10 @@ function createCargo(x,z){
 function createPunchingBag(){
  pivot=new THREE.Group();pivot.position.set(BAG.x,3.88,BAG.z);scene.add(pivot);
  // Ceiling bracket and mounting point remain stationary.
+ // A real support cable connects the training bag to the ceiling.
+ box(scene,.9,.20,.9,MAT.graphite,BAG.x,7.45,BAG.z);
+ bar(scene,new THREE.Vector3(BAG.x,4.08,BAG.z),new THREE.Vector3(BAG.x,7.38,BAG.z),.085,MAT.steel);
+ for(const y of [4.32,5.3,6.3,7.12])cylinder(scene,.19,.19,.12,MAT.graphite,BAG.x,y,BAG.z,12);
  cylinder(scene,.4,.4,.17,MAT.graphite,BAG.x,4.08,BAG.z);
  box(scene,.77,.13,.77,MAT.steel,BAG.x,4.21,BAG.z);
  // Moving chain links under the pivot.
