@@ -1,14 +1,19 @@
 {
-  "name": "vite-starter",
-  "version": "0.0.0",
+  "name": "electro-mageddon",
+  "version": "0.1.0",
   "private": true,
   "type": "module",
   "scripts": {
-    "dev": "vite",
+    "dev": "vite --host 0.0.0.0",
     "build": "vite build",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "test": "node --test"
   },
   "devDependencies": {
     "vite": "^8.3.6"
+  },
+  "description": "First-person 3D flashlight and punching-bag training room",
+  "dependencies": {
+    "three": "^0.180.0"
   }
 }
