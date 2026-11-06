@@ -1,6 +1,10 @@
 // Electromageddon v0.1 - deterministic gameplay rules (no renderer dependency)
 export const ROOM = Object.freeze({ minX:-11.15,maxX:11.15,minZ:-11.1,maxZ:11.1 });
 export const BAG = Object.freeze({ x:0,z:-3.75,radius:.65 });
+export const FLASHLIGHT = Object.freeze({
+  intensity:235, distance:36, angle:.57, penumbra:.72, decay:1.3,
+  beamRadius:6.2, beamLength:12, beamOpacity:.035
+});
 export const OBSTACLES = Object.freeze([
   {x:-7.1,z:-6.4,radius:1.15},{x:7.0,z:-6.2,radius:1.15},
   {x:-7.5,z:3.6,radius:1.2},{x:7.5,z:3.65,radius:1.2}
