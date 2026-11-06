@@ -1,6 +1,6 @@
 import './style.css';
 import * as THREE from 'three';
-import {ROOM,BAG,OBSTACLES,newGame,look,move,punch,update,bagInRange,flashlightToggle} from './gameplay.js';
+import {ROOM,BAG,OBSTACLES,FLASHLIGHT,newGame,look,move,punch,update,bagInRange,flashlightToggle} from './gameplay.js';
 
 // ELECTROMAGEDDON / PROTOTYPE 01 — one small, intentionally playable room.
 const $ = id => document.getElementById(id);
@@ -199,19 +199,19 @@ function makeArm(side){
  return root
 }
 function attachFlashlight(){
- torch=new THREE.SpotLight(0xe2f4ff,235,36,.57,.72,1.3);
+ torch=new THREE.SpotLight(0xe2f4ff,FLASHLIGHT.intensity,FLASHLIGHT.distance,FLASHLIGHT.angle,FLASHLIGHT.penumbra,FLASHLIGHT.decay);
  torch.position.set(-.19,-.1,0);
  torch.target.position.set(0,0,-9.5);
  torch.castShadow=true;torch.shadow.mapSize.set(768,768);torch.shadow.bias=-.00015;
  torch.shadow.camera.near=.13;torch.shadow.camera.far=35;
  camera.add(torch,torch.target);
- const cone=new THREE.CylinderGeometry(6.2,.02,12,40,1,true);
+ const cone=new THREE.CylinderGeometry(FLASHLIGHT.beamRadius,.02,FLASHLIGHT.beamLength,40,1,true);
  cone.rotateX(-Math.PI/2);
  beam=new THREE.Mesh(cone,new THREE.MeshBasicMaterial({
-  color:0xb4def2,transparent:true,opacity:.035,side:THREE.BackSide,
+  color:0xb4def2,transparent:true,opacity:FLASHLIGHT.beamOpacity,side:THREE.BackSide,
   depthWrite:false,blending:THREE.AdditiveBlending,fog:false
  }));
- beam.position.set(-.10,-.04,-6);
+ beam.position.set(-.10,-.04,-FLASHLIGHT.beamLength/2);
  beam.renderOrder=7;camera.add(beam);
  const frame=box(camera,.14,.12,.29,MAT.graphite,-.19,-.13,-.25);
  frame.castShadow=false;
