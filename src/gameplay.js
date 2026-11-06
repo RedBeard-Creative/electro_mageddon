@@ -57,9 +57,11 @@ export function punch(state){
   if(hit){
     state.hits++;state.lastHitAt=state.time;
     const f=forward(state.yaw);
-    // Impulse pushes the weighted bag in the direction of the fist.
-    state.bagVelX+=f.z*2.3;
-    state.bagVelZ-=f.x*2.3;
+    // The bag hangs BELOW its pivot. Positive X rotation sends its
+    // bottom toward -Z, and positive Z rotation sends its bottom toward +X.
+    // Keep the impulse aligned with the punch, AWAY from the player.
+    state.bagVelX-=f.z*2.3;
+    state.bagVelZ+=f.x*2.3;
   }
   return {performed:true,hit};
 }
